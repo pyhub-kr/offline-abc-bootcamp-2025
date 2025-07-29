@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멜론 TOP100 차트 (2023-12-04)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Roboto', 'Apple SD Gothic Neo', sans-serif;
+      background: #f7f8fa;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 32px auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      padding: 32px 24px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 2.2rem;
+    }
+    .desc {
+      text-align: center;
+      color: #666;
+      margin-bottom: 32px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+    }
+    th, td {
+      padding: 10px 6px;
+      text-align: left;
+    }
+    th {
+      background: #f0f2f5;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background: #fafbfc;
+    }
+    .thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .chart-section {
+      margin-bottom: 32px;
+    }
+    @media (max-width: 600px) {
+      .container { padding: 12px 2px; }
+      h1 { font-size: 1.3rem; }
+      th, td { font-size: 0.95rem; }
+      .thumb { width: 32px; height: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>멜론 TOP100 차트</h1>
+    <div class="desc">2023년 12월 4일 기준, 멜론 TOP100 곡 리스트와 아티스트별 곡 수 차트입니다.</div>
+    <div class="chart-section">
+      <canvas id="artistChart" height="120"></canvas>
+    </div>
+    <table id="songTable">
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>썸네일</th>
+          <th>곡명</th>
+          <th>아티스트</th>
+          <th>앨범</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 데이터 렌더링 영역 -->
+      </tbody>
+    </table>
+    <div style="text-align:center;color:#aaa;font-size:0.95em;">데이터 출처: <a href="https://pyhub.kr/melon/20231204.json" target="_blank">pyhub.kr</a></div>
+  </div>
+  <script>
+    async function fetchMelonData() {
+      const url = 'https://pyhub.kr/melon/20231204.json';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('데이터를 불러올 수 없습니다.');
+      return await res.json();
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector('#songTable tbody');
+      tbody.innerHTML = '';
+      data.forEach(song => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${song.rank}</td>
+          <td><img class="thumb" src="${song.thumbnail || ''}" alt="썸네일"></td>
+          <td>${song.title}</td>
+          <td>${song.artist}</td>
+          <td>${song.album}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderArtistChart(data) {
+      // 아티스트별 곡 수 집계
+      const artistCount = {};
+      data.forEach(song => {
+        const names = song.artist.split(/,|&|\//).map(s => s.trim());
+        names.forEach(name => {
+          if (!artistCount[name]) artistCount[name] = 0;
+          artistCount[name]++;
+        });
+      });
+      // 상위 10명만 추출
+      const sorted = Object.entries(artistCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const labels = sorted.map(([name]) => name);
+      const counts = sorted.map(([_, cnt]) => cnt);
+      const ctx = document.getElementById('artistChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '아티스트별 곡 수(상위 10명)',
+            data: counts,
+            backgroundColor: '#4f8cff',
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+    }
+
+    async function main() {
+      try {
+        const data = await fetchMelonData();
+        renderTable(data);
+        renderArtistChart(data);
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+    main();
+  </script>
+</body>
+</html>
